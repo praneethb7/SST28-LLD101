@@ -1,4 +1,16 @@
 public abstract class Exporter {
-    // implied "contract" but not enforced (smell)
-    public abstract ExportResult export(ExportRequest req);
+
+
+    public final ExportResult export(ExportRequest req) {
+
+        if (req == null)
+            throw new IllegalArgumentException("request cannot be null");
+
+        validate(req);
+        return doExport(req);
+    }
+
+    protected void validate(ExportRequest req) {}
+
+    protected abstract ExportResult doExport(ExportRequest req);
 }

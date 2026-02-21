@@ -1,4 +1,5 @@
 public class StudentRecord {
+
     public final String id;
     public final String name;
     public final String email;
@@ -13,4 +14,26 @@ public class StudentRecord {
     public String toString() {
         return "StudentRecord{id='" + id + "', name='" + name + "', email='" + email + "', phone='" + phone + "', program='" + program + "'}";
     }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public String getProgram() {
+        return program;
+    }
 }
+
+
