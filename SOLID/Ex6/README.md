@@ -18,7 +18,7 @@ A campus system sends notifications via email, SMS, and WhatsApp.
 
 ## 4. Your task
 - Make substitutability true: if code works with `NotificationSender`, it should work with any sender.
-- Preserve current outputs for the sample inputs in `Main`.
+- Preserve current outputs for the sample inputs in `Dem01`.
 
 ## 5. Constraints
 - Preserve console output for current demo.
@@ -32,7 +32,7 @@ A campus system sends notifications via email, SMS, and WhatsApp.
 ```bash
 cd SOLID/Ex6/src
 javac *.java
-java Main
+java Dem01
 ```
 
 ## 8. Sample output

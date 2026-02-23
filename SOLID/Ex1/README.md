@@ -41,7 +41,7 @@ Checkpoint E:
 - Preserve exact console output.
 
 ## 5. Constraints
-- Keep `Main` output exactly the same.
+- Keep `Dem01` output exactly the same.
 - Keep `StudentRecord` fields and `toString()` unchanged.
 - No external libraries.
 - Default package only.
@@ -56,7 +56,7 @@ Checkpoint E:
 ```bash
 cd SOLID/Ex1/src
 javac *.java
-java Main
+java Dem01
 ```
 
 ## 8. Sample output (must match)

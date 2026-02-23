@@ -35,7 +35,7 @@ Checkpoint D: Keep report text identical.
 ```bash
 cd SOLID/Ex3/src
 javac *.java
-java Main
+java Dem01
 ```
 
 ## 8. Sample output

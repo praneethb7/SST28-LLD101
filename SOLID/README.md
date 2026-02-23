@@ -35,7 +35,7 @@ From the exercise folder (example: `SOLID/Ex1/src`):
 
 ```bash
 javac *.java
-java Main
+java Dem01
 ```
 
 No Maven/Gradle. Java 17. Default package (no `package` lines).

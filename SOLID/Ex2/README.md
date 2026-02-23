@@ -5,7 +5,7 @@ A cafeteria billing console generates invoices for student orders. It currently 
 
 ## 2. Current behavior
 - Uses an in-memory menu
-- Builds an order (hard-coded in `Main`)
+- Builds an order (hard-coded in `Dem01`)
 - Computes subtotal, tax, discount, and total
 - Prints an invoice and writes it to a file-like store (in-memory)
 
@@ -15,7 +15,7 @@ A cafeteria billing console generates invoices for student orders. It currently 
 3. Discounts are hard-coded with ad-hoc conditions.
 4. Invoice formatting is mixed with money calculations.
 5. Persistence is a concrete class; hard to test without writing.
-6. `Main` depends on too many internal details.
+6. `Dem01` depends on too many internal details.
 
 ## 4. Your task (refactor plan)
 Checkpoint A: Run and capture output.
@@ -37,7 +37,7 @@ Checkpoint E: Keep output identical.
 ```bash
 cd SOLID/Ex2/src
 javac *.java
-java Main
+java Dem01
 ```
 
 ## 8. Sample output
