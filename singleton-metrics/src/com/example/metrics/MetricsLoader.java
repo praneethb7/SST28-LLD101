@@ -2,27 +2,29 @@ package com.example.metrics;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * Loads default metric keys from a properties file.
- *
- * CURRENT STATE (BROKEN ON PURPOSE):
- * - Uses 'new MetricsRegistry()' instead of the singleton.
- *
- * TODO (student):
- *  - Use MetricsRegistry.getInstance() and remove all direct instantiation.
+ * - Uses MetricsRegistry.getInstance() to grab the global singleton instance.
  */
 public class MetricsLoader {
 
     public MetricsRegistry loadFromFile(String path) throws IOException {
         Properties props = new Properties();
-        try (FileInputStream fis = new FileInputStream(path)) {
-            props.load(fis);
+        InputStream is =
+                MetricsLoader.class
+                        .getClassLoader()
+                        .getResourceAsStream("metrics.properties");
+
+        if (is == null) {
+            throw new IOException("metrics.properties not found in classpath");
         }
 
-        // BROKEN: should not create a new instance
-        MetricsRegistry registry = new MetricsRegistry();
+        props.load(is);
+
+        // FIXED: We ask for the global instance instead of creating a new one.
+        MetricsRegistry registry = MetricsRegistry.getInstance();
 
         for (String key : props.stringPropertyNames()) {
             String raw = props.getProperty(key, "0").trim();
