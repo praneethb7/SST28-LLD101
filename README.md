@@ -1,5 +1,3 @@
-Here's a brief rundown of each assignment and the core approach used to solve it:
-
 **SOLID/Ex1 — SRP: Student Onboarding** breaks up a monolithic `OnboardingService` that was doing everything at once. The fix was straightforward: pull parsing into `RawInputParser`, validation into `StudentValidator` with a clean `ValidationResult` object, persistence behind a `StudentRepository` interface backed by `FakeDBRepository`, and all console output into a dedicated `Printer` class. The orchestrator just wires them together.
 
 **SOLID/Ex2 — SRP: Cafeteria Billing** had a `CafeteriaSystem` mixing pricing math, tax, discounts, formatting, and saving. Each concern got its own home: `PricingCalculator`, `TaxPolicy`/`DefaultTaxPolicy`, `DiscountPolicy`/`DefaultDiscountPolicy`, `InvoiceBuilder` for formatting, and `InvoiceRepository` for persistence. The system becomes a pure coordinator.
