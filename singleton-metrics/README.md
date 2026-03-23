@@ -1,61 +1,90 @@
-Exercise A — Singleton Refactoring (Metrics Registry)
-----------------------------------------------------
-Narrative
-A CLI tool called **PulseMeter** collects runtime metrics (counters) and exposes them globally
-so any part of the app can increment counters like `REQUESTS_TOTAL`, `DB_ERRORS`, etc.
+## The problem this solves
 
-The current implementation is **not a real singleton**, **not thread-safe**, and is vulnerable to
-**reflection** and **serialization** breaking the singleton guarantee.
+The brief was to take a broken, naïve global-state implementation of `MetricsRegistry` and harden it into a **production-grade Singleton** that survives three real-world attacks: concurrency races, reflection abuse, and serialization bypasses.
 
-Your job is to refactor it into a **proper, thread-safe, lazy-initialized Singleton**.
+Let me diagram the overall structure first, then go through each design decision.---
 
-What you have (Starter)
-- `MetricsRegistry` is *intended* to be global, but:
-  - `getInstance()` can return different objects under concurrency.
-  - The constructor is not private.
-  - Reflection can create multiple instances.
-  - Serialization/deserialization can produce a new instance.
-- `MetricsLoader` incorrectly uses `new MetricsRegistry()`.
+Now let me walk through each design decision as I'd explain it to an instructor.
 
-Tasks
-1) Make `MetricsRegistry` a proper, **thread-safe singleton**
-   - **Lazy initialization**
-   - **Private constructor**
-   - Thread safety: pick one approach (recommended: static holder or double-checked locking)
+---
 
-2) Block reflection-based multiple construction
-   - If the constructor is called when an instance already exists, throw an exception
-   - (Hint: use a static flag/instance check inside the constructor)
+## 1. Lazy initialization with Double-Checked Locking (DCL)
 
-3) Preserve singleton on serialization
-   - Implement `readResolve()` so deserialization returns the same singleton instance
+```java
+private static volatile MetricsRegistry INSTANCE;
 
-4) Update `MetricsLoader` to use the singleton
-   - No `new MetricsRegistry()` anywhere in code
+public static MetricsRegistry getInstance() {
+    if (INSTANCE == null) {                    // First check — no lock, fast path
+        synchronized (MetricsRegistry.class) {
+            if (INSTANCE == null) {            // Second check — inside lock
+                INSTANCE = new MetricsRegistry();
+            }
+        }
+    }
+    return INSTANCE;
+}
+```
 
-Acceptance
-- Single instance across threads within a JVM run.
-- Reflection cannot construct a second instance.
-- Deserialization returns the same instance.
-- Loading metrics from `metrics.properties` works.
-- Values are accessible via:
-  - `increment(key)`
-  - `getCount(key)`
-  - `getAll()`
+**Why DCL and not just `synchronized`?** A fully synchronized `getInstance()` creates a bottleneck — every call acquires a lock even after the instance is already created. DCL gives you the best of both worlds: the first `null` check is a cheap unsynchronized read (fast path for 99.9% of calls), and the lock is only acquired on the very first construction path.
 
-Build/Run (Starter)
-  cd singleton-metrics/src
-  javac com/example/metrics/*.java
-  java com.example.metrics.App
+**Why `volatile`?** This is the subtle part. Object construction in Java involves three steps: allocate memory, initialize fields, assign reference. Without `volatile`, the JVM's memory model allows instruction reordering — another thread could see a non-null `INSTANCE` before its fields are initialized. `volatile` adds a memory barrier that prevents this reordering. Without it, DCL is broken.
 
-Useful Demo Commands (after you fix it)
-- Concurrency check:
-  java com.example.metrics.ConcurrencyCheck
-- Reflection attack check:
-  java com.example.metrics.ReflectionAttack
-- Serialization check:
-  java com.example.metrics.SerializationCheck
+---
 
-Note
-This starter is intentionally broken. Some of these checks will "succeed" in breaking the singleton
-until you fix the implementation.
+## 2. Reflection protection
+
+```java
+private MetricsRegistry() {
+    if (INSTANCE != null) {
+        throw new IllegalStateException("Singleton already initialized");
+    }
+}
+```
+
+Reflection can call `setAccessible(true)` on a private constructor and bypass access control entirely. The guard here is: if the constructor is called and an instance already exists, throw immediately. The attacker in `ReflectionAttack.java` calls `ctor.newInstance()` — this triggers the constructor, which sees `INSTANCE != null`, and throws `IllegalStateException` wrapped in an `InvocationTargetException`. The attack fails.
+
+**Limitation to be honest about:** This only works *after* the first instance is created. If the attacker calls the constructor before `getInstance()` has ever been called, the check passes. A stricter approach would be an `enum` singleton, which the JVM itself protects at the bytecode level. But for this exercise, the DCL + constructor guard combination is the expected pattern.
+
+---
+
+## 3. Serialization safety
+
+```java
+private Object readResolve() throws ObjectStreamException {
+    return getInstance();
+}
+```
+
+When Java deserializes an object, it bypasses the constructor entirely and creates a brand new instance from the byte stream. Without intervention, `SerializationCheck` would produce a second `MetricsRegistry` object. `readResolve()` is a special hook the serialization framework calls after reconstruction — returning `getInstance()` here forces the deserialized result to be replaced by the canonical singleton. The new object gets GC'd, and the same reference is returned.
+
+---
+
+## 4. Thread-safe business methods
+
+```java
+public synchronized void increment(String key) {
+    counters.put(key, getCount(key) + 1);
+}
+```
+
+The counters map itself is a plain `HashMap`, which is not thread-safe. All mutating and reading methods are `synchronized` on `this`, ensuring atomic reads and writes. A `ConcurrentHashMap` with `merge()` or `compute()` would be a more granular and slightly more performant alternative, but `synchronized` methods are correct and easier to reason about.
+
+---
+
+## 5. `MetricsLoader` — using the singleton, not `new`
+
+The fixed `MetricsLoader` calls `MetricsRegistry.getInstance()` instead of `new MetricsRegistry()`. This means loading from `metrics.properties` populates the **same** instance that the rest of the application references. In `App.java`, the identity hash codes of `loaded` and `global` will match — that's the validation that the design works end to end.
+
+---
+
+## How the three checks validate correctness
+
+`ConcurrencyCheck` spawns 80 threads all racing to call `getInstance()` simultaneously. Because of DCL + `volatile`, only one instance is ever created — all 80 threads get the same identity hash code.
+
+`ReflectionAttack` tries `ctor.newInstance()` after the singleton exists — the constructor guard throws and the attack fails with an `InvocationTargetException`.
+
+`SerializationCheck` serializes the instance to bytes, deserializes it, and checks if `a == b`. Because of `readResolve()`, they are the exact same object.
+
+---
+
+**The key takeaway for an LLD interview:** a Singleton is not just "a class with a static field." The three threats, concurrency, reflection, and serialization, each require a distinct, explicit fix. Missing any one of them means you have a *nominally* singleton class that can be broken in practice.
